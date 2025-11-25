@@ -1,32 +1,32 @@
-from flask import Flask, request, make_response
+from flask import Flask, request, Response
+import os
 
 app = Flask(__name__)
-
-# Verify Token wahi jo Meta Dashboard me hai
 VERIFY_TOKEN = "money_honey_secret_123"
 
-@app.route('/webhook', methods=['GET'])
+
+# --------------- VERIFY WEBHOOK (META HANDSHAKE) ---------------
+@app.get("/webhook")
 def verify_webhook():
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
 
-    # Check agar token match karta hai
     if mode == "subscribe" and token == VERIFY_TOKEN:
         print("✅ WEBHOOK_VERIFIED")
-        
-        # --- FIX: Force response to be Plain Text ---
-        challenge_text = str(challenge).strip()
-        response = make_response(challenge_text, 200)
-        response.headers["Content-Type"] = "text/plain"
-        return response
-    
-    # Agar match nahi kiya
-    return "Forbidden", 403
+        # Return challenge EXACTLY as Meta sent it
+        return Response(challenge, status=200, mimetype="text/plain")
 
-@app.route('/webhook', methods=['POST'])
+    return Response("Forbidden", status=403)
+
+
+# --------------- HANDLE INCOMING MESSAGES ---------------
+@app.post("/webhook")
 def handle_messages():
-    return "EVENT_RECEIVED", 200
+    return Response("EVENT_RECEIVED", status=200)
 
+
+# --------------- RENDER PORT CONFIG ---------------
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=10000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
